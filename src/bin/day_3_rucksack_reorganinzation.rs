@@ -90,7 +90,7 @@ fn parse_priority(item: char) -> u32 {
     }
 }
 
-fn solve_pt1(input_text: String) -> u32 {
+fn solve_pt1(input_text: &String) -> u32 {
     input_text
         .lines()
         .map(split_middle)
@@ -99,7 +99,7 @@ fn solve_pt1(input_text: String) -> u32 {
         .sum::<u32>()
 }
 
-fn solve_pt2(input_text: String, elves: usize) -> u32 {
+fn solve_pt2(input_text: &String, elves: usize) -> u32 {
     input_text
         .lines()
         .collect::<Vec<&str>>()
@@ -120,10 +120,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let input_text = load_input(FILENAME);
     let elves_pt2 = 3;
 
-    println!("Part One: {:#?}", solve_pt1(input_text.clone()));
+    println!("Part One: {:#?}", solve_pt1(&input_text));
     // Correct: 7821
 
-    println!("Part Two: {:#?}", solve_pt2(input_text.clone(), elves_pt2));
+    println!("Part Two: {:#?}", solve_pt2(&input_text, elves_pt2));
     // Correct: 2752
 
     Ok(())
@@ -147,11 +147,11 @@ CrZsJsPPZsGzwwsLwLmpwMDw";
 
     #[test]
     fn test_pt1() {
-        assert_eq!(solve_pt1(TEST_DATA.to_string()), ANS_PT1);
+        assert_eq!(solve_pt1(&TEST_DATA.to_string()), ANS_PT1);
     }
 
     #[test]
     fn test_pt2() {
-        assert_eq!(solve_pt2(TEST_DATA.to_string(), ELVES_PT2), ANS_PT2);
+        assert_eq!(solve_pt2(&TEST_DATA.to_string(), ELVES_PT2), ANS_PT2);
     }
 }

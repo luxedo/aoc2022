@@ -54,7 +54,7 @@
 use aoc2022::load_input;
 use std::error::Error;
 
-fn solve(input_data: String, elves: usize) -> u64 {
+fn solve(input_data: &String, elves: usize) -> u64 {
     let mut calories = input_data
         .split("\n\n")
         .map(|elf| {
@@ -73,10 +73,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let elves_pt1: usize = 1;
     let elves_pt2: usize = 3;
 
-    print!("Part one: {:#?}\n", solve(input_text.clone(), elves_pt1));
+    print!("Part one: {:#?}\n", solve(&input_text, elves_pt1));
     // Correct: 66186
 
-    print!("Part two: {:#?}\n", solve(input_text.clone(), elves_pt2));
+    print!("Part two: {:#?}\n", solve(&input_text, elves_pt2));
     // Correct: 196804
 
     Ok(())
@@ -109,11 +109,11 @@ mod example {
 
     #[test]
     fn test_pt1() {
-        assert_eq!(solve(TEST_DATA.to_string(), ELVES_PT1), ANS_PT1);
+        assert_eq!(solve(&TEST_DATA.to_string(), ELVES_PT1), ANS_PT1);
     }
 
     #[test]
     fn test_pt2() {
-        assert_eq!(solve(TEST_DATA.to_string(), ELVES_PT2), ANS_PT2);
+        assert_eq!(solve(&TEST_DATA.to_string(), ELVES_PT2), ANS_PT2);
     }
 }

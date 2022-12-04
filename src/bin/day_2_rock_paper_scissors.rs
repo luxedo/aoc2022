@@ -134,7 +134,7 @@ fn find_move(enemy_move: Move, condition: Outcome) -> Move {
     }
 }
 
-fn solve_pt1(input_text: String) -> u32 {
+fn solve_pt1(input_text: &String) -> u32 {
     input_text
         .trim_end_matches("\n")
         .split("\n")
@@ -143,7 +143,7 @@ fn solve_pt1(input_text: String) -> u32 {
         .sum::<u32>()
 }
 
-fn solve_pt2(input_text: String) -> u32 {
+fn solve_pt2(input_text: &String) -> u32 {
     input_text
         .trim_end_matches("\n")
         .split("\n")
@@ -157,11 +157,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     const FILENAME: &str = "data/day_2_input.txt";
     let input_text = load_input(FILENAME);
 
-    let score_pt1 = solve_pt1(input_text.clone());
+    let score_pt1 = solve_pt1(&input_text);
     print!("Part One: {:#?}\n", score_pt1);
     // Correct: 13221
 
-    let score_pt2 = solve_pt2(input_text.clone());
+    let score_pt2 = solve_pt2(&input_text);
     print!("Part Two: {:#?}\n", score_pt2);
     // Correct: 13131
 
@@ -181,11 +181,11 @@ C Z";
 
     #[test]
     fn test_pt1() {
-        assert_eq!(solve_pt1(TEST_DATA.to_string()), ANS_PT1);
+        assert_eq!(solve_pt1(&TEST_DATA.to_string()), ANS_PT1);
     }
 
     #[test]
     fn test_pt2() {
-        assert_eq!(solve_pt2(TEST_DATA.to_string()), ANS_PT2);
+        assert_eq!(solve_pt2(&TEST_DATA.to_string()), ANS_PT2);
     }
 }
