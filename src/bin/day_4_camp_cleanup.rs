@@ -87,8 +87,7 @@ fn solve(input_text: &String, overlap_fn: fn(&Range<u64>, &Range<u64>) -> bool) 
                 })
                 .collect::<Vec<_>>()
         })
-        .map(|ranges| overlap_fn(&ranges[0], &ranges[1]))
-        .filter(|b| *b)
+        .filter(|ranges| overlap_fn(&ranges[0], &ranges[1]))
         .count() as u64
 }
 
