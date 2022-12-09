@@ -52,15 +52,13 @@ fn solve(input_text: String, window_size: usize) -> u64 {
     (input_text
         .as_bytes()
         .windows(window_size)
-        .enumerate()
-        .find(|(_, w)| {
+        .position(|w| {
             let mut window = w.iter().collect::<Vec<_>>().clone();
             window.sort();
             window.dedup();
             window.len() == window_size
         })
         .unwrap()
-        .0
         + window_size) as u64
 }
 
