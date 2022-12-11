@@ -154,7 +154,7 @@ fn solve_pt2(input_text: &String) -> u32 {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    const FILENAME: &str = "data/day_2_input.txt";
+    const FILENAME: &str = "data/day_02_input.txt";
     let input_text = load_input(FILENAME);
 
     let score_pt1 = solve_pt1(&input_text);

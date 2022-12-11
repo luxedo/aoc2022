@@ -274,7 +274,7 @@ fn solve_pt2(input_text: String) -> u64 {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    const FILENAME: &str = "data/day_7_input.txt";
+    const FILENAME: &str = "data/day_07_input.txt";
     let input_text = load_input(FILENAME);
 
     print!("Part one: {:#?}\n", solve_pt1(input_text.clone()));

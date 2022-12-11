@@ -68,7 +68,7 @@ fn solve(input_data: &String, elves: usize) -> u64 {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    const FILENAME: &str = "data/day_1_input.txt";
+    const FILENAME: &str = "data/day_01_input.txt";
     let input_text = load_input(FILENAME);
     let elves_pt1: usize = 1;
     let elves_pt2: usize = 3;

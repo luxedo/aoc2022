@@ -183,7 +183,7 @@ fn get_top_boxes(boxes: Vec<Vec<char>>) -> String {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    const FILENAME: &str = "data/day_5_input.txt";
+    const FILENAME: &str = "data/day_05_input.txt";
     let input_text = load_input(FILENAME);
 
     print!("Part one: {:#?}\n", solve_pt1(input_text.clone()));

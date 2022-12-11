@@ -853,14 +853,14 @@ fn solve_pt2(input_text: String) -> u64 {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    const FILENAME: &str = "data/day_9_input.txt";
+    const FILENAME: &str = "data/day_09_input.txt";
     let input_text = load_input(FILENAME);
 
     print!("Part one: {:#?}\n", solve_pt1(input_text.clone()));
-    // Correct: AAA
+    // Correct: 6087
 
     print!("Part two: {:#?}\n", solve_pt2(input_text.clone()));
-    // Correct: BBB
+    // Correct: 2493
 
     Ok(())
 }
