@@ -446,7 +446,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Correct: 14560
 
     print!("Part two: \n{}\n", solve_pt2(&input_text));
-    // Correct: BBB
+    // Correct: EKRHEPUZ
 
     Ok(())
 }
