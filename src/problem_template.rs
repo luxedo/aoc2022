@@ -6,11 +6,11 @@
 use aoc2022::load_input;
 use std::error::Error;
 
-fn solve_pt1(input_text: String) -> u64 {
+fn solve_pt1(input_text: &str) -> u64 {
     0
 }
 
-fn solve_pt2(input_text: String) -> u64 {
+fn solve_pt2(input_text: &str) -> u64 {
     1
 }
 
@@ -18,10 +18,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     const FILENAME: &str = "data/day_X_input.txt";
     let input_text = load_input(FILENAME);
 
-    print!("Part one: {:#?}\n", solve_pt1(input_text.clone()));
+    print!("Part one: {:#?}\n", solve_pt1(&input_text));
     // Correct: AAA
 
-    print!("Part two: {:#?}\n", solve_pt2(input_text.clone()));
+    print!("Part two: {:#?}\n", solve_pt2(&input_text));
     // Correct: BBB
 
     Ok(())
@@ -38,11 +38,11 @@ mod example {
 
     #[test]
     fn test_pt1() {
-        assert_eq!(solve_pt1(TEST_DATA.to_string()), ANS_PT1);
+        assert_eq!(solve_pt1(TEST_DATA), ANS_PT1);
     }
 
     #[test]
     fn test_pt2() {
-        assert_eq!(solve_pt2(TEST_DATA.to_string()), ANS_PT2);
+        assert_eq!(solve_pt2(TEST_DATA), ANS_PT2);
     }
 }
