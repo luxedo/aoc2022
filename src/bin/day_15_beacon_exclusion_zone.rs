@@ -96,18 +96,29 @@
 // In this example, in the row where y=10, there are 26 positions where a beacon cannot be present.
 //
 // Consult the report from the sensors you just deployed. In the row where y=2000000, how many positions cannot contain a beacon?
+//
+// --- Part Two ---
+// Your handheld device indicates that the distress signal is coming from a beacon nearby. The distress beacon is not detected by any sensor, but the distress beacon must have x and y coordinates each no lower than 0 and no larger than 4000000.
+//
+// To isolate the distress beacon's signal, you need to determine its tuning frequency, which can be found by multiplying its x coordinate by 4000000 and then adding its y coordinate.
+//
+// In the example above, the search space is smaller: instead, the x and y coordinates can each be at most 20. With this reduced search area, there is only a single position that could have a beacon: x=14, y=11. The tuning frequency for this distress beacon is 56000011.
+//
+// Find the only possible position for the distress beacon. What is its tuning frequency?
 
 use aoc2022::load_input;
+use std::collections::BTreeSet;
 use std::error::Error;
+use std::fmt;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
 struct Coord {
     x: isize,
     y: isize,
 }
 impl Coord {
-    fn manhattan(&self, other: &Self) -> usize {
-        self.x.abs_diff(other.x) + self.y.abs_diff(other.y)
+    fn manhattan(&self, other: &Self) -> isize {
+        (self.x.abs_diff(other.x) + self.y.abs_diff(other.y)) as isize
     }
 }
 
@@ -115,22 +126,55 @@ impl Coord {
 struct Scan {
     beacon: Coord,
     sensor: Coord,
-    distance: usize,
+    distance: isize,
 }
 impl Scan {
     fn in_range(&self, coord: &Coord) -> bool {
         self.sensor.manhattan(&coord) <= self.distance
     }
-    fn has_beacon(&self, coord: &Coord) -> bool {
+    fn is_beacon(&self, coord: &Coord) -> bool {
         self.beacon == *coord
+    }
+    fn is_sensor(&self, coord: &Coord) -> bool {
+        self.sensor == *coord
     }
 }
 
-#[derive(Debug)]
 struct Zone {
     scans: Vec<Scan>,
     x_min: isize,
     x_max: isize,
+    y_min: isize,
+    y_max: isize,
+}
+impl fmt::Debug for Zone {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let zone_str = (self.y_min..self.y_max)
+            .map(|y| {
+                format!("{:03}", y.to_string())
+                    + &(self.x_min..=self.x_max)
+                        .map(|x| {
+                            let c = &Coord { x, y };
+                            self.scans.iter().fold('.', |acc, scan| {
+                                if acc != '.' && acc != '#' {
+                                    return acc;
+                                } else if scan.is_beacon(c) {
+                                    return 'B';
+                                } else if scan.is_sensor(c) {
+                                    return 'S';
+                                } else if scan.in_range(c) {
+                                    return '#';
+                                } else {
+                                    return acc;
+                                }
+                            })
+                        })
+                        .collect::<String>()
+                    + "\n"
+            })
+            .collect::<String>();
+        write!(f, "\n{}", zone_str)
+    }
 }
 impl Zone {
     fn from_string(input: &str) -> Self {
@@ -158,38 +202,87 @@ impl Zone {
             .collect::<Vec<Scan>>();
         let x_min = scans
             .iter()
-            .map(|scan| scan.sensor.x - scan.distance as isize)
+            .map(|scan| scan.sensor.x - scan.distance)
             .min()
             .unwrap();
         let x_max = scans
             .iter()
-            .map(|scan| scan.sensor.x + scan.distance as isize)
+            .map(|scan| scan.sensor.x + scan.distance)
             .max()
             .unwrap();
+        let y_min = scans
+            .iter()
+            .map(|scan| scan.sensor.y - scan.distance)
+            .min()
+            .unwrap();
+        let y_max = scans
+            .iter()
+            .map(|scan| scan.sensor.y + scan.distance)
+            .max()
+            .unwrap();
+
         Self {
             scans,
             x_min,
             x_max,
+            y_min,
+            y_max,
         }
+    }
+    fn not_beacon(&self, c: &Coord) -> bool {
+        self.scans
+            .iter()
+            .map(|s| s.in_range(c) && !s.is_beacon(c))
+            .any(|in_range| in_range)
+    }
+    fn not_beacon_row(&self, y: isize) -> isize {
+        (self.x_min..self.x_max)
+            .map(|x| self.not_beacon(&Coord { x, y }) as isize)
+            .sum::<isize>()
+    }
+    fn is_empty(&self, c: &Coord) -> bool {
+        self.scans
+            .iter()
+            .map(|s| !s.in_range(c))
+            .all(|not_in_range| not_in_range)
+    }
+    fn distress_beacon(&self, low: isize, high: isize) -> Option<Coord> {
+        let candidates = self
+            .scans
+            .iter()
+            .flat_map(|scan| {
+                (0..=(scan.distance + 1))
+                    .flat_map(|i| {
+                        let j = (scan.distance + 1) - i;
+                        let Coord { x, y } = scan.sensor;
+                        vec![
+                            Coord { x: x + i, y: y + j },
+                            Coord { x: x + i, y: y - j },
+                            Coord { x: x - i, y: y - j },
+                            Coord { x: x - i, y: y + j },
+                        ]
+                    })
+                    .filter(|c| {
+                        c.x >= low && c.x <= high && c.y >= low && c.y <= high && self.is_empty(c)
+                    })
+                    .collect::<BTreeSet<Coord>>()
+            })
+            .collect::<BTreeSet<Coord>>();
+        candidates.iter().next().copied()
     }
 }
 
 fn solve_pt1(input_text: &str, row: isize) -> u64 {
     let zone = Zone::from_string(input_text);
     let y = row;
-    (zone.x_min..zone.x_max)
-        .map(|x| {
-            let c = &Coord { x, y };
-            zone.scans
-                .iter()
-                .map(|s| s.in_range(c) && !s.has_beacon(c))
-                .any(|in_range| in_range) as u64
-        })
-        .sum::<u64>()
+    zone.not_beacon_row(y) as u64
 }
 
-fn solve_pt2(input_text: &str) -> u64 {
-    1
+fn solve_pt2(input_text: &str, low: isize, high: isize) -> u64 {
+    const X_MUL: isize = 4000000;
+    let zone = Zone::from_string(input_text);
+    let distress = zone.distress_beacon(low, high).unwrap();
+    (X_MUL * distress.x + distress.y) as u64
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -198,10 +291,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     const Y: isize = 2000000;
     print!("Part one: {:#?}\n", solve_pt1(&input_text, Y));
-    // Correct: AAA
+    // Correct: 4879972
 
-    print!("Part two: {:#?}\n", solve_pt2(&input_text));
-    // Correct: BBB
+    const LOW: isize = 0;
+    const HIGH: isize = 4000000;
+    print!("Part two: {:#?}\n", solve_pt2(&input_text, LOW, HIGH));
+    // Correct: 12525726647448
 
     Ok(())
 }
@@ -225,17 +320,19 @@ Sensor at x=17, y=20: closest beacon is at x=21, y=22
 Sensor at x=16, y=7: closest beacon is at x=15, y=3
 Sensor at x=14, y=3: closest beacon is at x=15, y=3
 Sensor at x=20, y=1: closest beacon is at x=15, y=3";
+    const Y: isize = 10;
     const ANS_PT1: u64 = 26;
-    const ROW: isize = 10;
-    const ANS_PT2: u64 = 1;
+    const LOW: isize = 0;
+    const HIGH: isize = 20;
+    const ANS_PT2: u64 = 56000011;
 
     #[test]
     fn test_pt1() {
-        assert_eq!(solve_pt1(TEST_DATA, ROW), ANS_PT1);
+        assert_eq!(solve_pt1(TEST_DATA, Y), ANS_PT1);
     }
 
     #[test]
     fn test_pt2() {
-        assert_eq!(solve_pt2(TEST_DATA), ANS_PT2);
+        assert_eq!(solve_pt2(TEST_DATA, LOW, HIGH), ANS_PT2);
     }
 }
