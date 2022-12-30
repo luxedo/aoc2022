@@ -333,8 +333,16 @@
 // To prove to the elephants your simulation is accurate, they want to know how tall the tower will get after 2022 rocks have stopped (but before the 2023rd rock begins falling). In this example, the tower of rocks will be 3068 units tall.
 //
 // How many units tall will the tower of rocks be after 2022 rocks have stopped falling?
+//
+// --- Part Two ---
+// The elephants are not impressed by your simulation. They demand to know how tall the tower will be after 1000000000000 rocks have stopped! Only then will they feel confident enough to proceed through the cave.
+//
+// In the example above, the tower would be 1514285714288 units tall!
+//
+// How tall will the tower be after 1000000000000 rocks have stopped?
 
 use aoc2022::load_input;
+use std::collections::VecDeque;
 use std::error::Error;
 use std::fmt;
 use std::str::FromStr;
@@ -449,14 +457,16 @@ impl Rocks {
 }
 
 struct RockFall {
-    falling: Vec<bool>,
-    stopped: Vec<bool>,
+    falling: VecDeque<bool>,
+    stopped: VecDeque<bool>,
     rocks: Rocks,
     jet: Jet,
     width: usize,
     left_border: usize,
     drop_height: usize,
     height: usize,
+    total_height: usize,
+    trim_height: usize,
 }
 impl fmt::Debug for RockFall {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -482,9 +492,16 @@ impl fmt::Debug for RockFall {
 }
 
 impl RockFall {
-    fn new(rocks: Rocks, jet: Jet, width: usize, left_border: usize, drop_height: usize) -> Self {
-        let falling = vec![false; width * drop_height];
-        let stopped = vec![false; width * drop_height];
+    fn new(
+        rocks: Rocks,
+        jet: Jet,
+        width: usize,
+        left_border: usize,
+        drop_height: usize,
+        trim_height: usize,
+    ) -> Self {
+        let falling = VecDeque::new();
+        let stopped = VecDeque::new();
         Self {
             stopped,
             falling,
@@ -493,7 +510,9 @@ impl RockFall {
             width,
             left_border,
             drop_height,
-            height: drop_height,
+            height: 0,
+            total_height: 0,
+            trim_height,
         }
     }
     fn get_stopped(&self, x: usize, y: usize) -> bool {
@@ -505,32 +524,144 @@ impl RockFall {
     fn set_falling(&mut self, x: usize, y: usize, value: bool) {
         self.falling[x + y * self.width] = value;
     }
-    fn drop_next(&mut self) -> usize {
+    fn max_height(&self) -> usize {
+        self.height - self.stopped.iter().position(|s| *s).unwrap_or(0) / self.width
+    }
+    fn max_total_height(&self) -> usize {
+        self.total_height
+    }
+    fn drop_next(&mut self) {
         let mut rock = self.rocks.next().clone();
-        self.new_lines(rock.height); // TODO: Calculate how many new rows
+        self.new_lines(rock.height + self.drop_height); // TODO: Calculate how many new rows
         rock.shape.iter().for_each(|r| {
             self.set_falling(r.x + self.left_border, r.y, true);
         });
         loop {
             // push
-            // fall
-            // self.drop_falling(1);
+            let side = *self.jet.next();
+            self.move_falling(side);
+
+            // drop
+            if !self.move_falling(Side::Down) {
+                self.lock_falling();
+                break;
+            }
         }
-        dbg!(self.height);
-        dbg!(self.jet.next());
-        10
+        self.del_lines(self.height - self.max_height());
+        self.trim_height();
     }
+
     fn new_lines(&mut self, lines: usize) {
         self.height += lines;
-        self.falling.extend(vec![false; lines * self.width]);
-        self.stopped.extend(vec![false; lines * self.width]);
+        self.total_height += lines;
+        let lines = lines * self.width;
+        self.falling.extend(vec![false; lines]);
+        self.stopped.extend(vec![false; lines]);
+        self.falling.rotate_right(lines);
+        self.stopped.rotate_right(lines);
+    }
+    fn del_lines(&mut self, lines: usize) {
+        self.height -= lines;
+        self.total_height -= lines;
+        let lines = lines * self.width;
+        self.falling.drain(0..lines);
+        self.stopped.drain(0..lines);
+    }
+    fn trim_height(&mut self) {
+        if self.max_height() > self.trim_height {
+            let del_lines = self.height - self.trim_height / 2;
+            self.height -= del_lines;
+            let del_lines = self.width * del_lines;
+            self.falling.drain(del_lines..);
+            self.stopped.drain(del_lines..);
+        }
+    }
+
+    fn move_falling(&mut self, side: Side) -> bool {
+        if self.collision(side) {
+            return false;
+        }
+        self._move_falling(side, false);
+        true
+    }
+    fn _move_falling(&mut self, side: Side, opposite: bool) {
+        match (side, opposite) {
+            (Side::Left, false) | (Side::Right, true) => {
+                self.falling.rotate_left(1);
+            }
+            (Side::Right, false) | (Side::Left, true) => {
+                self.falling.rotate_right(1);
+            }
+            (Side::Down, false) | (Side::Up, true) => {
+                self.falling.rotate_right(self.width);
+            }
+            (Side::Up, false) | (Side::Down, true) => {
+                self.falling.rotate_left(self.width);
+            }
+        };
+    }
+
+    fn collision(&mut self, side: Side) -> bool {
+        // Check side walls and bottom.
+        match side {
+            Side::Left => {
+                if (0..self.height).find(|y| self.get_falling(0, *y)).is_some() {
+                    return true;
+                }
+            }
+            Side::Right => {
+                if (0..self.height)
+                    .find(|y| self.get_falling(self.width - 1, *y))
+                    .is_some()
+                {
+                    return true;
+                }
+            }
+            Side::Down => {
+                if (0..self.width)
+                    .find(|x| self.get_falling(*x, self.height - 1))
+                    .is_some()
+                {
+                    return true;
+                }
+            }
+            Side::Up => {
+                if (0..self.width).find(|x| self.get_falling(*x, 0)).is_some() {
+                    return true;
+                }
+            }
+        };
+        // Check collision with stopped.
+        self._move_falling(side, false);
+        let collide = self
+            .falling
+            .iter()
+            .zip(self.stopped.iter())
+            .find(|(a, b)| **a && **b)
+            .is_some();
+        self._move_falling(side, true);
+        collide
+    }
+
+    fn lock_falling(&mut self) {
+        self.stopped
+            .iter_mut()
+            .zip(self.falling.iter_mut())
+            .for_each(|(s, f)| {
+                if *f {
+                    *s = true;
+                    *f = false;
+                }
+            });
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 enum Side {
     Left,
     Right,
+    Down,
+    Up,
 }
 #[derive(Debug)]
 struct Jet {
@@ -543,11 +674,12 @@ impl FromStr for Jet {
     type Err = ParseJetError;
     fn from_str(pattern: &str) -> Result<Self, Self::Err> {
         let pattern = pattern
+            .trim()
             .chars()
             .map(|c| match c {
                 '<' => Side::Left,
                 '>' => Side::Right,
-                _ => panic!("Malformed input"),
+                l => panic!("Malformed input {l}"),
             })
             .collect::<Vec<Side>>();
         Ok(Self { pattern, cursor: 0 })
@@ -565,18 +697,27 @@ fn solve_pt1(input_text: &str) -> u64 {
     const DROPPED_ROCKS: usize = 2022;
     let jet = input_text.parse::<Jet>().expect("Well formed input");
     let rocks = ROCKS.parse::<Rocks>().expect("All good with rocks");
-    let mut rock_fall = RockFall::new(rocks, jet, WIDTH, LEFT_BORDER, DROP_HEIGHT);
-    rock_fall.drop_next();
-    dbg!(&rock_fall);
-    0
+    let mut rock_fall = RockFall::new(rocks, jet, WIDTH, LEFT_BORDER, DROP_HEIGHT, 20);
+    for _ in 0..DROPPED_ROCKS {
+        rock_fall.drop_next();
+    }
+    rock_fall.max_total_height() as u64
 }
 
 fn solve_pt2(input_text: &str) -> u64 {
-    1
+    // const DROPPED_ROCKS: usize = 1000000000000;
+    const DROPPED_ROCKS: usize = 100000;
+    let jet = input_text.parse::<Jet>().expect("Well formed input");
+    let rocks = ROCKS.parse::<Rocks>().expect("All good with rocks");
+    let mut rock_fall = RockFall::new(rocks, jet, WIDTH, LEFT_BORDER, DROP_HEIGHT, 20);
+    for _ in 0..DROPPED_ROCKS {
+        rock_fall.drop_next();
+    }
+    rock_fall.max_total_height() as u64
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    const FILENAME: &str = "data/day_X_input.txt";
+    const FILENAME: &str = "data/day_17_input.txt";
     let input_text = load_input(FILENAME);
 
     print!("Part one: {:#?}\n", solve_pt1(&input_text));
@@ -595,7 +736,7 @@ mod example {
 
     const TEST_DATA: &str = ">>><<><>><<<>><>>><<<>>><<<><<<>><>><<>>";
     const ANS_PT1: u64 = 3068;
-    const ANS_PT2: u64 = 1;
+    const ANS_PT2: u64 = 1514285714288;
 
     #[test]
     fn test_pt1() {

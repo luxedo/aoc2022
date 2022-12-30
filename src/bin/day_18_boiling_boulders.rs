@@ -51,7 +51,7 @@ struct LavaStream {
     max_z: usize,
     boulders: Vec<u8>,
 }
-impl LavaStream {
+impl LavaStream {  // MEH. cOUld dO BeTteR
     fn new(max_x: usize, max_y: usize, max_z: usize) -> Self {
         LavaStream {
             max_x,
