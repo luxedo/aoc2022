@@ -40,117 +40,167 @@
 // Following the Elf's instructions for the second column, what would your total score be if everything goes exactly according to your strategy guide?
 
 use aoc2022::load_input;
+use std::cmp::Ordering;
 use std::error::Error;
+use std::slice::Iter;
+use std::str::FromStr;
 
-// Dá pra fazer com enum?
-const E_ROCK: &str = "A";
-const E_PAPER: &str = "B";
-const E_SCISSORS: &str = "C";
-const P_ROCK: &str = "X";
-const P_PAPER: &str = "Y";
-const P_SCISSORS: &str = "Z";
-const P_LOSE: &str = "X";
-const P_DRAW: &str = "Y";
-const P_WIN: &str = "Z";
-
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum Move {
-    ROCK = 1,
-    PAPER = 2,
-    SCISSORS = 3,
+    Rock = 1,
+    Paper = 2,
+    Scissors = 3,
 }
-
 #[derive(Debug)]
+struct ParseMoveError;
+impl FromStr for Move {
+    type Err = ParseMoveError;
+    fn from_str(str_move: &str) -> Result<Self, Self::Err> {
+        const E_ROCK: &str = "A";
+        const E_PAPER: &str = "B";
+        const E_SCISSORS: &str = "C";
+        const P_ROCK: &str = "X";
+        const P_PAPER: &str = "Y";
+        const P_SCISSORS: &str = "Z";
+        match str_move {
+            E_ROCK | P_ROCK => Ok(Self::Rock),
+            E_PAPER | P_PAPER => Ok(Self::Paper),
+            E_SCISSORS | P_SCISSORS => Ok(Self::Scissors),
+            _ => Err(ParseMoveError),
+        }
+    }
+}
+
+impl Move {
+    fn iter() -> Iter<'static, Move> {
+        static MOVES: [Move; 3] = [Move::Rock, Move::Paper, Move::Scissors];
+        MOVES.iter()
+    }
+    fn losing_move(&self) -> Move {
+        for mv in Self::iter() {
+            if mv.compare(self) == Ordering::Less {
+                return *mv;
+            }
+        }
+        panic!("No losing move!");
+    }
+    fn winning_move(&self) -> Move {
+        for mv in Self::iter() {
+            if mv.compare(self) == Ordering::Greater {
+                return *mv;
+            }
+        }
+        panic!("No winning_move move!");
+    }
+    fn compare(&self, other: &Self) -> Ordering {
+        match other {
+            _ if self == other => Ordering::Equal,
+            Move::Rock => match self {
+                Move::Paper => Ordering::Greater,
+                _ => Ordering::Less,
+            },
+            Move::Paper => match self {
+                Move::Scissors => Ordering::Greater,
+                _ => Ordering::Less,
+            },
+            Move::Scissors => match self {
+                Move::Rock => Ordering::Greater,
+                _ => Ordering::Less,
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 enum Outcome {
-    LOSE = 0,
-    DRAW = 3,
-    WIN = 6,
+    Lose = 0,
+    Draw = 3,
+    Win = 6,
 }
-
-fn parse_move(str_move: &str) -> Move {
-    match str_move {
-        E_ROCK | P_ROCK => Move::ROCK,
-        E_PAPER | P_PAPER => Move::PAPER,
-        E_SCISSORS | P_SCISSORS => Move::SCISSORS,
-        _ => panic!("Oh no! Move not found!"),
+#[derive(Debug)]
+struct ParseOutcomeError;
+impl FromStr for Outcome {
+    type Err = ParseOutcomeError;
+    fn from_str(str_outcome: &str) -> Result<Self, Self::Err> {
+        const P_LOSE: &str = "X";
+        const P_DRAW: &str = "Y";
+        const P_WIN: &str = "Z";
+        match str_outcome {
+            P_LOSE => Ok(Outcome::Lose),
+            P_DRAW => Ok(Outcome::Draw),
+            P_WIN => Ok(Outcome::Win),
+            _ => Err(ParseOutcomeError),
+        }
     }
 }
 
-fn parse_condition(str_condition: &str) -> Outcome {
-    match str_condition {
-        P_LOSE => Outcome::LOSE,
-        P_DRAW => Outcome::DRAW,
-        P_WIN => Outcome::WIN,
-        &_ => panic!("Oh no! Outcome not found!"),
+struct Game {
+    player_move: Move,
+    enemy_move: Move,
+    outcome: Outcome,
+    score: usize,
+}
+
+impl Game {
+    fn from_str(game_str: &str) -> Self {
+        let (enemy_move, player_move) = game_str.split_once(" ").expect("It's allright");
+        let player_move = player_move.parse::<Move>().unwrap();
+        let enemy_move = enemy_move.parse::<Move>().unwrap();
+        let outcome = Self::play(&player_move, &enemy_move);
+        let score = Self::score(&player_move, &outcome);
+        Self {
+            player_move,
+            enemy_move,
+            outcome,
+            score,
+        }
+    }
+    fn from_outcome_str(game_str: &str) -> Self {
+        let (enemy_move, outcome) = game_str.split_once(" ").expect("It's allright");
+        let enemy_move = enemy_move.parse::<Move>().unwrap();
+        let outcome = outcome.parse::<Outcome>().unwrap();
+        let player_move = Self::find_move(&enemy_move, &outcome);
+        let score = Self::score(&player_move, &outcome);
+        Self {
+            player_move,
+            enemy_move,
+            outcome,
+            score,
+        }
+    }
+    fn play(player_move: &Move, enemy_move: &Move) -> Outcome {
+        match player_move.compare(enemy_move) {
+            Ordering::Equal => Outcome::Draw,
+            Ordering::Greater => Outcome::Win,
+            Ordering::Less => Outcome::Lose,
+        }
+    }
+    fn score(player_move: &Move, outcome: &Outcome) -> usize {
+        *outcome as usize + *player_move as usize
+    }
+    fn find_move(enemy_move: &Move, condition: &Outcome) -> Move {
+        match condition {
+            Outcome::Draw => *enemy_move,
+            Outcome::Lose => enemy_move.losing_move(),
+            Outcome::Win => enemy_move.winning_move(),
+        }
     }
 }
 
-fn parse_strategy1(str_game: &str) -> (Move, Move) {
-    let moves = str_game.split_whitespace().collect::<Vec<&str>>();
-    (parse_move(moves[0]), parse_move(moves[1]))
-}
-
-fn parse_strategy2(str_game: &str) -> (Move, Outcome) {
-    let moves = str_game.split_whitespace().collect::<Vec<&str>>();
-    (parse_move(moves[0]), parse_condition(moves[1]))
-}
-
-fn play(enemy_move: Move, player_move: Move) -> Outcome {
-    match enemy_move {
-        _ if enemy_move == player_move => Outcome::DRAW,
-        Move::ROCK => match player_move {
-            Move::PAPER => Outcome::WIN,
-            _ => Outcome::LOSE,
-        },
-        Move::PAPER => match player_move {
-            Move::SCISSORS => Outcome::WIN,
-            _ => Outcome::LOSE,
-        },
-        Move::SCISSORS => match player_move {
-            Move::ROCK => Outcome::WIN,
-            _ => Outcome::LOSE,
-        },
-    }
-}
-
-fn score((enemy_move, player_move): (Move, Move)) -> u32 {
-    let outcome = play(enemy_move, player_move);
-    outcome as u32 + player_move as u32
-}
-
-fn find_move(enemy_move: Move, condition: Outcome) -> Move {
-    match condition {
-        Outcome::DRAW => enemy_move,
-        Outcome::LOSE => match enemy_move {
-            Move::ROCK => Move::SCISSORS,
-            Move::PAPER => Move::ROCK,
-            Move::SCISSORS => Move::PAPER,
-        },
-        Outcome::WIN => match enemy_move {
-            Move::ROCK => Move::PAPER,
-            Move::PAPER => Move::SCISSORS,
-            Move::SCISSORS => Move::ROCK,
-        },
-    }
-}
-
-fn solve_pt1(input_text: &String) -> u32 {
+fn solve_pt1(input_text: &str) -> usize {
     input_text
-        .trim_end_matches("\n")
+        .trim()
         .split("\n")
-        .map(parse_strategy1)
-        .map(score)
-        .sum::<u32>()
+        .map(|game_str| Game::from_str(game_str).score)
+        .sum::<usize>()
 }
 
-fn solve_pt2(input_text: &String) -> u32 {
+fn solve_pt2(input_text: &str) -> usize {
     input_text
-        .trim_end_matches("\n")
+        .trim()
         .split("\n")
-        .map(parse_strategy2)
-        .map(|game| (game.0, find_move(game.0, game.1)))
-        .map(score)
-        .sum::<u32>()
+        .map(|game_str| Game::from_outcome_str(game_str).score)
+        .sum::<usize>()
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -176,16 +226,16 @@ mod example {
     const TEST_DATA: &str = "A Y
 B X
 C Z";
-    const ANS_PT1: u32 = 15;
-    const ANS_PT2: u32 = 12;
+    const ANS_PT1: usize = 15;
+    const ANS_PT2: usize = 12;
 
     #[test]
     fn test_pt1() {
-        assert_eq!(solve_pt1(&TEST_DATA.to_string()), ANS_PT1);
+        assert_eq!(solve_pt1(&TEST_DATA), ANS_PT1);
     }
 
     #[test]
     fn test_pt2() {
-        assert_eq!(solve_pt2(&TEST_DATA.to_string()), ANS_PT2);
+        assert_eq!(solve_pt2(&TEST_DATA), ANS_PT2);
     }
 }

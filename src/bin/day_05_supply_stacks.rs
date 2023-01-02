@@ -105,39 +105,44 @@ struct Move {
     from: usize,
     to: usize,
 }
+type Moves = Vec<Move>;
+type CraneFn = fn(&mut Boxes, &Move);
 
-fn crane9000(mut boxes: Vec<Vec<char>>, moves: &Vec<Move>) -> Vec<Vec<char>> {
-    moves.iter().for_each(|mv| {
-        (0..mv.boxes).for_each(|_| {
-            let bx = boxes[mv.from].pop().unwrap();
-            boxes[mv.to].push(bx);
-        })
-    });
-    boxes
+struct Boxes {
+    storage: Vec<Vec<char>>,
+}
+impl Boxes {
+    fn run_crane(&mut self, crane: CraneFn, moves: &Moves) {
+        moves.iter().for_each(|mv| {
+            crane(self, mv);
+        });
+    }
+    fn get_top_boxes(&self) -> String {
+        self.storage
+            .iter()
+            .map(|pile| pile.last().unwrap())
+            .collect::<String>()
+    }
 }
 
-fn crane9001(mut boxes: Vec<Vec<char>>, moves: &Vec<Move>) -> Vec<Vec<char>> {
-    moves.iter().for_each(|mv| {
-        let slice_start = boxes[mv.from].len() - mv.boxes;
-        let bxs = boxes[mv.from].drain(slice_start..).collect::<Vec<_>>();
-        boxes[mv.to].extend(bxs);
-    });
-    boxes
+fn crane9000(boxes: &mut Boxes, mv: &Move) {
+    for _ in 0..mv.boxes {
+        let bx = boxes.storage[mv.from].pop().unwrap();
+        boxes.storage[mv.to].push(bx);
+    }
 }
 
-fn solve_pt1(input_text: String) -> String {
-    solve(input_text, crane9000)
+fn crane9001(boxes: &mut Boxes, mv: &Move) {
+    let slice_start = boxes.storage[mv.from].len() - mv.boxes;
+    let bxs = boxes.storage[mv.from]
+        .drain(slice_start..)
+        .collect::<Vec<_>>();
+    boxes.storage[mv.to].extend(bxs);
 }
 
-fn solve_pt2(input_text: String) -> String {
-    solve(input_text, crane9001)
-}
-
-fn solve(input_text: String, crane: fn(Vec<Vec<char>>, &Vec<Move>) -> Vec<Vec<char>>) -> String {
-    let split = input_text.trim_end().split("\n\n").collect::<Vec<&str>>();
-    let mut storage = split
-        .get(0)
-        .expect("Can't find storage")
+fn parse_input(input_text: &str) -> (Boxes, Moves) {
+    let (storage, moves) = input_text.trim_end().split_once("\n\n").unwrap();
+    let storage = storage
         .lines()
         .map(|line| {
             line.as_bytes()
@@ -146,7 +151,7 @@ fn solve(input_text: String, crane: fn(Vec<Vec<char>>, &Vec<Move>) -> Vec<Vec<ch
                 .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
-    storage = (0..storage[0].len())
+    let storage = (0..storage[0].len())
         .map(|i| {
             storage
                 .iter()
@@ -156,10 +161,9 @@ fn solve(input_text: String, crane: fn(Vec<Vec<char>>, &Vec<Move>) -> Vec<Vec<ch
                 .filter(|item| item != &' ')
                 .collect::<Vec<_>>()
         })
-        .collect::<Vec<_>>();
-    let moves = split
-        .get(1)
-        .expect("Can't find moves")
+        .collect::<Vec<Vec<char>>>();
+    let boxes = Boxes { storage };
+    let moves = moves
         .lines()
         .map(|line| {
             let s = line.split(" ").collect::<Vec<&str>>();
@@ -169,27 +173,30 @@ fn solve(input_text: String, crane: fn(Vec<Vec<char>>, &Vec<Move>) -> Vec<Vec<ch
                 to: s[5].parse::<usize>().unwrap() - 1,
             }
         })
-        .collect::<Vec<Move>>();
-
-    storage = crane(storage, &moves);
-    get_top_boxes(storage)
+        .collect::<Moves>();
+    (boxes, moves)
 }
 
-fn get_top_boxes(boxes: Vec<Vec<char>>) -> String {
-    boxes
-        .iter()
-        .map(|pile| pile.last().unwrap())
-        .collect::<String>()
+fn solve_pt1(input_text: &str) -> String {
+    let (mut boxes, moves) = parse_input(input_text);
+    boxes.run_crane(crane9000, &moves);
+    boxes.get_top_boxes()
+}
+
+fn solve_pt2(input_text: &str) -> String {
+    let (mut boxes, moves) = parse_input(input_text);
+    boxes.run_crane(crane9001, &moves);
+    boxes.get_top_boxes()
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     const FILENAME: &str = "data/day_05_input.txt";
     let input_text = load_input(FILENAME);
 
-    print!("Part one: {:#?}\n", solve_pt1(input_text.clone()));
+    print!("Part one: {:#?}\n", solve_pt1(&input_text));
     // Correct: VRWBSFZWM
 
-    print!("Part two: {:#?}\n", solve_pt2(input_text.clone()));
+    print!("Part two: {:#?}\n", solve_pt2(&input_text));
     // Correct: RBTWJWMCF
 
     Ok(())
@@ -214,11 +221,11 @@ move 1 from 1 to 2";
 
     #[test]
     fn test_pt1() {
-        assert_eq!(solve_pt1(TEST_DATA.to_string()), ANS_PT1.to_string());
+        assert_eq!(solve_pt1(TEST_DATA), ANS_PT1);
     }
 
     #[test]
     fn test_pt2() {
-        assert_eq!(solve_pt2(TEST_DATA.to_string()), ANS_PT2.to_string());
+        assert_eq!(solve_pt2(TEST_DATA), ANS_PT2);
     }
 }

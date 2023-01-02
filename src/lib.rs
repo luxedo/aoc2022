@@ -7,8 +7,7 @@ pub fn load_input(filename: &str) -> String {
     match metadata(Path::new(&filename)) {
         Ok(_) => read_to_string(filename)
             .expect("Failed reading file {filename}")
-            .parse::<String>()
-            .unwrap(),
+            .to_owned(),
         Err(_) => panic!("Input file {filename} not found"),
     }
 }

@@ -58,17 +58,10 @@
 // Find the item type that corresponds to the badges of each three-Elf group. What is the sum of the priorities of those item types?
 
 use aoc2022::load_input;
-use std::convert::TryInto;
 use std::error::Error;
 use std::result::Result;
 
-fn split_middle(s: &str) -> (&str, &str) {
-    let length: usize = s.len();
-    let middle: usize = (length / 2).try_into().unwrap();
-    (&s[0..middle], &s[middle..length])
-}
-
-fn string_intersection((str_1, str_2): (String, String)) -> String {
+fn string_intersection((str_1, str_2): (&str, &str)) -> String {
     let mut str_1_clone = str_1.chars().collect::<Vec<char>>();
     let mut str_2_clone = str_2.chars().collect::<Vec<char>>();
     str_1_clone.sort();
@@ -82,24 +75,22 @@ fn string_intersection((str_1, str_2): (String, String)) -> String {
         .collect()
 }
 
-fn parse_priority(item: char) -> u32 {
-    match item {
-        'a'..='z' => item as u32 - 'a' as u32 + 1,
-        'A'..='Z' => item as u32 - 'A' as u32 + 27,
-        _ => todo!(),
-    }
+fn parse_priority(item: char) -> usize {
+    let priorities: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+    priorities.iter().position(|p| *p == item).expect("Oh boi!") as usize + 1
 }
 
-fn solve_pt1(input_text: &String) -> u32 {
+fn solve_pt1(input_text: &str) -> usize {
     input_text
         .lines()
-        .map(split_middle)
-        .map(|(s1, s2)| string_intersection((s1.to_string(), s2.to_string())))
-        .map(|items| items.chars().map(parse_priority).sum::<u32>())
-        .sum::<u32>()
+        .map(|s| s.split_at(s.len() / 2))
+        .map(|(s1, s2)| string_intersection((s1, s2)))
+        .map(|items| items.chars().map(parse_priority).sum::<usize>())
+        .sum::<usize>()
 }
 
-fn solve_pt2(input_text: &String, elves: usize) -> u32 {
+fn solve_pt2(input_text: &str) -> usize {
+    let elves = 3;
     input_text
         .lines()
         .collect::<Vec<&str>>()
@@ -108,22 +99,21 @@ fn solve_pt2(input_text: &String, elves: usize) -> u32 {
             sacks
                 .iter()
                 .map(|s| s.to_string())
-                .reduce(|acc, item| string_intersection((acc, item)))
+                .reduce(|acc, item| string_intersection((&acc, &item)))
                 .unwrap()
         })
-        .map(|items| items.chars().map(parse_priority).sum::<u32>())
-        .sum::<u32>()
+        .map(|items| items.chars().map(parse_priority).sum::<usize>())
+        .sum::<usize>()
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     const FILENAME: &str = "data/day_03_input.txt";
     let input_text = load_input(FILENAME);
-    let elves_pt2 = 3;
 
     println!("Part One: {:#?}", solve_pt1(&input_text));
     // Correct: 7821
 
-    println!("Part Two: {:#?}", solve_pt2(&input_text, elves_pt2));
+    println!("Part Two: {:#?}", solve_pt2(&input_text));
     // Correct: 2752
 
     Ok(())
@@ -141,17 +131,16 @@ wMqvLMZHhHMvwLHjbvcjnnSBnvTQFn
 ttgJtRGJQctTZtZT
 CrZsJsPPZsGzwwsLwLmpwMDw";
 
-    const ANS_PT1: u32 = 157;
-    const ELVES_PT2: usize = 3;
-    const ANS_PT2: u32 = 70;
+    const ANS_PT1: usize = 157;
+    const ANS_PT2: usize = 70;
 
     #[test]
     fn test_pt1() {
-        assert_eq!(solve_pt1(&TEST_DATA.to_string()), ANS_PT1);
+        assert_eq!(solve_pt1(&TEST_DATA), ANS_PT1);
     }
 
     #[test]
     fn test_pt2() {
-        assert_eq!(solve_pt2(&TEST_DATA.to_string(), ELVES_PT2), ANS_PT2);
+        assert_eq!(solve_pt2(&TEST_DATA), ANS_PT2);
     }
 }

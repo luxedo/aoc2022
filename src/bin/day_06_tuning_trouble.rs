@@ -1,5 +1,5 @@
 // Advent Of Code
-// https://adventofcode.com/2022/day/4
+// https://adventofcode.com/2022/day/6
 //
 //--- Day 6: Tuning Trouble ---
 // The preparations are finally complete; you and the Elves leave camp on foot and begin to make your way toward the star fruit grove.
@@ -48,7 +48,7 @@
 use aoc2022::load_input;
 use std::error::Error;
 
-fn solve(input_text: String, window_size: usize) -> u64 {
+fn solve(input_text: &str, window_size: usize) -> usize {
     (input_text
         .as_bytes()
         .windows(window_size)
@@ -59,15 +59,15 @@ fn solve(input_text: String, window_size: usize) -> u64 {
             window.len() == window_size
         })
         .unwrap()
-        + window_size) as u64
+        + window_size) as usize
 }
 
-fn solve_pt1(input_text: String) -> u64 {
+fn solve_pt1(input_text: &str) -> usize {
     let window_size: usize = 4;
     solve(input_text, window_size)
 }
 
-fn solve_pt2(input_text: String) -> u64 {
+fn solve_pt2(input_text: &str) -> usize {
     let window_size: usize = 14;
     solve(input_text, window_size)
 }
@@ -76,10 +76,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     const FILENAME: &str = "data/day_06_input.txt";
     let input_text = load_input(FILENAME);
 
-    print!("Part one: {:#?}\n", solve_pt1(input_text.clone()));
+    print!("Part one: {:#?}\n", solve_pt1(&input_text));
     // Correct: 1920
 
-    print!("Part two: {:#?}\n", solve_pt2(input_text.clone()));
+    print!("Part two: {:#?}\n", solve_pt2(&input_text));
     // Correct: 2334
 
     Ok(())
@@ -95,56 +95,56 @@ mod example {
     const TEST_DATA_2: &str = "nppdvjthqldpwncqszvftbrmjlhg";
     const TEST_DATA_3: &str = "nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg";
     const TEST_DATA_4: &str = "zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw";
-    const ANS_PT1_0: u64 = 7;
-    const ANS_PT1_1: u64 = 5;
-    const ANS_PT1_2: u64 = 6;
-    const ANS_PT1_3: u64 = 10;
-    const ANS_PT1_4: u64 = 11;
-    const ANS_PT2_0: u64 = 19;
-    const ANS_PT2_1: u64 = 23;
-    const ANS_PT2_2: u64 = 23;
-    const ANS_PT2_3: u64 = 29;
-    const ANS_PT2_4: u64 = 26;
+    const ANS_PT1_0: usize = 7;
+    const ANS_PT1_1: usize = 5;
+    const ANS_PT1_2: usize = 6;
+    const ANS_PT1_3: usize = 10;
+    const ANS_PT1_4: usize = 11;
+    const ANS_PT2_0: usize = 19;
+    const ANS_PT2_1: usize = 23;
+    const ANS_PT2_2: usize = 23;
+    const ANS_PT2_3: usize = 29;
+    const ANS_PT2_4: usize = 26;
 
     #[test]
     fn test_pt1_0() {
-        assert_eq!(solve_pt1(TEST_DATA_0.to_string()), ANS_PT1_0);
+        assert_eq!(solve_pt1(TEST_DATA_0), ANS_PT1_0);
     }
     #[test]
     fn test_pt1_1() {
-        assert_eq!(solve_pt1(TEST_DATA_1.to_string()), ANS_PT1_1);
+        assert_eq!(solve_pt1(TEST_DATA_1), ANS_PT1_1);
     }
     #[test]
     fn test_pt1_2() {
-        assert_eq!(solve_pt1(TEST_DATA_2.to_string()), ANS_PT1_2);
+        assert_eq!(solve_pt1(TEST_DATA_2), ANS_PT1_2);
     }
     #[test]
     fn test_pt1_3() {
-        assert_eq!(solve_pt1(TEST_DATA_3.to_string()), ANS_PT1_3);
+        assert_eq!(solve_pt1(TEST_DATA_3), ANS_PT1_3);
     }
     #[test]
     fn test_pt1_4() {
-        assert_eq!(solve_pt1(TEST_DATA_4.to_string()), ANS_PT1_4);
+        assert_eq!(solve_pt1(TEST_DATA_4), ANS_PT1_4);
     }
 
     #[test]
     fn test_pt2_0() {
-        assert_eq!(solve_pt2(TEST_DATA_0.to_string()), ANS_PT2_0);
+        assert_eq!(solve_pt2(TEST_DATA_0), ANS_PT2_0);
     }
     #[test]
     fn test_pt2_1() {
-        assert_eq!(solve_pt2(TEST_DATA_1.to_string()), ANS_PT2_1);
+        assert_eq!(solve_pt2(TEST_DATA_1), ANS_PT2_1);
     }
     #[test]
     fn test_pt2_2() {
-        assert_eq!(solve_pt2(TEST_DATA_2.to_string()), ANS_PT2_2);
+        assert_eq!(solve_pt2(TEST_DATA_2), ANS_PT2_2);
     }
     #[test]
     fn test_pt2_3() {
-        assert_eq!(solve_pt2(TEST_DATA_3.to_string()), ANS_PT2_3);
+        assert_eq!(solve_pt2(TEST_DATA_3), ANS_PT2_3);
     }
     #[test]
     fn test_pt2_4() {
-        assert_eq!(solve_pt2(TEST_DATA_4.to_string()), ANS_PT2_4);
+        assert_eq!(solve_pt2(TEST_DATA_4), ANS_PT2_4);
     }
 }

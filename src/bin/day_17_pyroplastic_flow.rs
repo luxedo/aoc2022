@@ -706,7 +706,7 @@ fn solve_pt1(input_text: &str) -> u64 {
 
 fn solve_pt2(input_text: &str) -> u64 {
     // const DROPPED_ROCKS: usize = 1000000000000;
-    const DROPPED_ROCKS: usize = 100000;
+    const DROPPED_ROCKS: usize =    100000;
     let jet = input_text.parse::<Jet>().expect("Well formed input");
     let rocks = ROCKS.parse::<Rocks>().expect("All good with rocks");
     let mut rock_fall = RockFall::new(rocks, jet, WIDTH, LEFT_BORDER, DROP_HEIGHT, 20);

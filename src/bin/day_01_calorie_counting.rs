@@ -54,29 +54,37 @@
 use aoc2022::load_input;
 use std::error::Error;
 
-fn solve(input_data: &String, elves: usize) -> u64 {
+fn solve(input_data: &str, elves: usize) -> usize {
     let mut calories = input_data
         .split("\n\n")
         .map(|elf| {
             elf.split("\n")
-                .map(|elf_box| elf_box.parse::<u64>().unwrap_or(0))
+                .map(|elf_box| elf_box.parse::<usize>().expect("All right"))
                 .sum()
         })
-        .collect::<Vec<u64>>();
+        .collect::<Vec<usize>>();
     calories.sort_by(|a, b| b.cmp(a));
     calories[0..elves].iter().sum()
+}
+
+fn solve_pt1(input_data: &str) -> usize {
+    let elves = 1;
+    solve(input_data, elves)
+}
+
+fn solve_pt2(input_data: &str) -> usize {
+    let elves = 3;
+    solve(input_data, elves)
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     const FILENAME: &str = "data/day_01_input.txt";
     let input_text = load_input(FILENAME);
-    let elves_pt1: usize = 1;
-    let elves_pt2: usize = 3;
 
-    print!("Part one: {:#?}\n", solve(&input_text, elves_pt1));
+    print!("Part one: {:#?}\n", solve_pt1(&input_text));
     // Correct: 66186
 
-    print!("Part two: {:#?}\n", solve(&input_text, elves_pt2));
+    print!("Part two: {:#?}\n", solve_pt2(&input_text));
     // Correct: 196804
 
     Ok(())
@@ -101,19 +109,16 @@ mod example {
 9000
 
 10000";
-    const ANS_PT1: u64 = 24000;
-    const ELVES_PT1: usize = 1;
-    const ELVES_PT2: usize = 3;
-    // const ANS_PT2: [u64; ELVES] = [24000, 11000, 10000];
-    const ANS_PT2: u64 = 45000;
+    const ANS_PT1: usize = 24000;
+    const ANS_PT2: usize = 45000;
 
     #[test]
     fn test_pt1() {
-        assert_eq!(solve(&TEST_DATA.to_string(), ELVES_PT1), ANS_PT1);
+        assert_eq!(solve_pt1(&TEST_DATA), ANS_PT1);
     }
 
     #[test]
     fn test_pt2() {
-        assert_eq!(solve(&TEST_DATA.to_string(), ELVES_PT2), ANS_PT2);
+        assert_eq!(solve_pt2(&TEST_DATA), ANS_PT2);
     }
 }

@@ -57,19 +57,19 @@ use aoc2022::load_input;
 use std::error::Error;
 use std::ops::Range;
 
-fn fully_contains(r0: &Range<u64>, r1: &Range<u64>) -> bool {
+fn fully_contains(r0: &Range<usize>, r1: &Range<usize>) -> bool {
     (r0.contains(&r1.start) && r0.contains(&(r1.end - 1)))
         || (r1.contains(&r0.start) && r1.contains(&(r0.end - 1)))
 }
 
-fn any_overlap(r0: &Range<u64>, r1: &Range<u64>) -> bool {
+fn any_overlap(r0: &Range<usize>, r1: &Range<usize>) -> bool {
     r0.contains(&r1.start)
         || r0.contains(&(r1.end - 1))
         || r1.contains(&r0.start)
         || r1.contains(&(r0.end - 1))
 }
 
-fn solve(input_text: &String, overlap_fn: fn(&Range<u64>, &Range<u64>) -> bool) -> u64 {
+fn solve(input_text: &str, overlap_fn: fn(&Range<usize>, &Range<usize>) -> bool) -> usize {
     input_text
         .trim()
         .lines()
@@ -78,7 +78,7 @@ fn solve(input_text: &String, overlap_fn: fn(&Range<u64>, &Range<u64>) -> bool) 
                 .map(|elf_ids| {
                     elf_ids
                         .split("-")
-                        .map(|id| id.parse::<u64>().unwrap())
+                        .map(|id| id.parse::<usize>().unwrap())
                         .collect::<Vec<_>>()
                 })
                 .map(|elf_ids| Range {
@@ -88,14 +88,14 @@ fn solve(input_text: &String, overlap_fn: fn(&Range<u64>, &Range<u64>) -> bool) 
                 .collect::<Vec<_>>()
         })
         .filter(|ranges| overlap_fn(&ranges[0], &ranges[1]))
-        .count() as u64
+        .count() as usize
 }
 
-fn solve_pt1(input_text: &String) -> u64 {
+fn solve_pt1(input_text: &str) -> usize {
     solve(input_text, fully_contains)
 }
 
-fn solve_pt2(input_text: &String) -> u64 {
+fn solve_pt2(input_text: &str) -> usize {
     solve(input_text, any_overlap)
 }
 
@@ -123,16 +123,16 @@ mod example {
 2-8,3-7
 6-6,4-6
 2-6,4-8";
-    const ANS_PT1: u64 = 2;
-    const ANS_PT2: u64 = 4;
+    const ANS_PT1: usize = 2;
+    const ANS_PT2: usize = 4;
 
     #[test]
     fn test_pt1() {
-        assert_eq!(solve_pt1(&TEST_DATA.to_string()), ANS_PT1);
+        assert_eq!(solve_pt1(&TEST_DATA), ANS_PT1);
     }
 
     #[test]
     fn test_pt2() {
-        assert_eq!(solve_pt2(&TEST_DATA.to_string()), ANS_PT2);
+        assert_eq!(solve_pt2(&TEST_DATA), ANS_PT2);
     }
 }

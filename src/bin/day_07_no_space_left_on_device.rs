@@ -1,5 +1,5 @@
 // Advent Of Code
-// https://adventofcode.com/2022/day/4
+// https://adventofcode.com/2022/day/7
 //
 // --- Day 7: No Space Left On Device ---
 // You can hear birds chirping and raindrops hitting leaves as the expedition proceeds. Occasionally, you can even hear much louder sounds in the distance; how big do the animals get out here, anyway?
@@ -169,14 +169,44 @@ impl Root {
             self.dirs[i].size = file_sizes + dir_sizes;
         }
     }
-    fn list_dir_sizes(&mut self) -> Vec<u64> {
+    fn list_dir_sizes(&mut self) -> Vec<usize> {
         let mut sizes = self
             .dirs
             .iter_mut()
-            .map(|d| d.size as u64)
-            .collect::<Vec<u64>>();
+            .map(|d| d.size as usize)
+            .collect::<Vec<usize>>();
         sizes.sort();
         sizes
+    }
+    fn parse_dir_structure(&mut self, commands: &mut Vec<&str>) {
+        match commands.len() {
+            0 => (),
+            _ => {
+                let shell_interaction = commands.remove(0);
+                let (full_command, output) = shell_interaction
+                    .split_once("\n")
+                    .unwrap_or((shell_interaction, ""));
+                let (cmd_str, args) = full_command.split_once(" ").unwrap_or((full_command, ""));
+                match cmd_str {
+                    CD => {
+                        self.change_dir(args);
+                    }
+                    LS => output.split("\n").for_each(|row| {
+                        let (head, tail) = row.split_once(" ").unwrap();
+                        match head {
+                            DIR_ANCHOR => {
+                                self.new_dir(tail);
+                            }
+                            _ => {
+                                self.new_file(tail, head.parse::<usize>().unwrap());
+                            }
+                        };
+                    }),
+                    &_ => panic!("Command not found"),
+                };
+                self.parse_dir_structure(commands);
+            }
+        }
     }
 }
 
@@ -207,38 +237,8 @@ struct File {
     size: usize,
 }
 
-fn parse_dir_structure(commands: &mut Vec<&str>, root: &mut Root) {
-    match commands.len() {
-        0 => (),
-        _ => {
-            let shell_interaction = commands.remove(0);
-            let (full_command, output) = shell_interaction
-                .split_once("\n")
-                .unwrap_or((shell_interaction, ""));
-            let (cmd_str, args) = full_command.split_once(" ").unwrap_or((full_command, ""));
-            match cmd_str {
-                CD => {
-                    root.change_dir(args);
-                }
-                LS => output.split("\n").for_each(|row| {
-                    let (head, tail) = row.split_once(" ").unwrap();
-                    match head {
-                        DIR_ANCHOR => {
-                            root.new_dir(tail);
-                        }
-                        _ => {
-                            root.new_file(tail, head.parse::<usize>().unwrap());
-                        }
-                    };
-                }),
-                &_ => panic!("Command not found"),
-            };
-            parse_dir_structure(commands, root);
-        }
-    }
-}
-
-fn input_to_root(input_text: String, root: &mut Root) {
+fn parse_input(input_text: &str) -> Root {
+    let mut root = Root::new();
     let mut commands = input_text
         .strip_prefix(SHELL_ANCHOR)
         .unwrap()
@@ -246,26 +246,25 @@ fn input_to_root(input_text: String, root: &mut Root) {
         .map(|cmd| cmd.trim())
         .collect::<Vec<_>>();
 
-    parse_dir_structure(&mut commands, root);
+    root.parse_dir_structure(&mut commands);
     root.compute_dir_sizes();
+    root
 }
 
-fn solve_pt1(input_text: String) -> u64 {
-    let at_most_pt1: u64 = 100000;
-    let mut root = Root::new();
-    input_to_root(input_text, &mut root);
+fn solve_pt1(input_text: &str) -> usize {
+    let at_most_pt1: usize = 100000;
+    let mut root = parse_input(input_text);
     root.list_dir_sizes()
         .into_iter()
         .filter(|a| a < &at_most_pt1)
-        .sum::<u64>()
+        .sum::<usize>()
 }
 
-fn solve_pt2(input_text: String) -> u64 {
-    let total_disk: u64 = 70000000;
-    let at_least: u64 = 30000000;
-    let mut root = Root::new();
-    input_to_root(input_text, &mut root);
-    let root_size = root.get_root_dir().size as u64;
+fn solve_pt2(input_text: &str) -> usize {
+    let total_disk: usize = 70000000;
+    let at_least: usize = 30000000;
+    let mut root = parse_input(input_text);
+    let root_size = root.get_root_dir().size as usize;
     let free_at_most = at_least - (total_disk - root_size);
     root.list_dir_sizes()
         .into_iter()
@@ -277,10 +276,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     const FILENAME: &str = "data/day_07_input.txt";
     let input_text = load_input(FILENAME);
 
-    print!("Part one: {:#?}\n", solve_pt1(input_text.clone()));
+    print!("Part one: {:#?}\n", solve_pt1(&input_text));
     // Correct: 1206825
 
-    print!("Part two: {:#?}\n", solve_pt2(input_text.clone()));
+    print!("Part two: {:#?}\n", solve_pt2(&input_text));
     // Correct: 9608311
 
     Ok(())
@@ -314,16 +313,16 @@ $ ls
 8033020 d.log
 5626152 d.ext
 7214296 k";
-    const ANS_PT1: u64 = 95437;
-    const ANS_PT2: u64 = 24933642;
+    const ANS_PT1: usize = 95437;
+    const ANS_PT2: usize = 24933642;
 
     #[test]
     fn test_pt1() {
-        assert_eq!(solve_pt1(TEST_DATA.to_string()), ANS_PT1);
+        assert_eq!(solve_pt1(TEST_DATA), ANS_PT1);
     }
 
     #[test]
     fn test_pt2() {
-        assert_eq!(solve_pt2(TEST_DATA.to_string()), ANS_PT2);
+        assert_eq!(solve_pt2(TEST_DATA), ANS_PT2);
     }
 }
