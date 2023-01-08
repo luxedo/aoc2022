@@ -65,168 +65,181 @@
 //
 // Consider each tree on your map. What is the highest scenic score possible for any tree?
 //
-
 use aoc2022::load_input;
-use std::cmp::Ordering;
 use std::error::Error;
 
-type BVec = Vec<bool>;
-type BMatrix = Vec<BVec>;
-type IVec = Vec<i32>;
-type IMatrix = Vec<IVec>;
-
-fn visible_left(row: &IVec) -> BVec {
-    let mut highest: i32 = -1;
-    row.iter()
-        .map(|tree| match tree.cmp(&highest) {
-            Ordering::Greater => {
-                highest = *tree;
-                true
-            }
-            Ordering::Less | Ordering::Equal => false,
-        })
-        .collect::<BVec>()
+#[derive(Debug)]
+enum Side {
+    Left,
+    Top,
+    Right,
+    Bottom,
 }
 
-fn rotate_90<T: Copy>(m: &Vec<Vec<T>>) -> Vec<Vec<T>> {
-    let len = m.len();
-    let n = m.clone();
-    (0..len)
-        .map(|i| (0..len).map(|j| n[len - j - 1][i] as T).collect::<Vec<T>>())
-        .collect::<Vec<Vec<T>>>()
+struct Forest {
+    trees: Vec<usize>,
+    height: usize,
+    width: usize,
 }
-
-fn rotate<T: Copy>(m: &Vec<Vec<T>>, side: i8) -> Vec<Vec<T>> {
-    let mut n: Vec<Vec<T>> = m.clone();
-    for _ in 0..=(side - 1) {
-        n = rotate_90(&n);
+impl Forest {
+    fn visible_from_borders(&self) -> usize {
+        [Side::Left, Side::Top, Side::Right, Side::Bottom]
+            .iter()
+            .map(|side| self.visible_from(side))
+            .reduce(|acc, cur| Self::vec_or(acc, cur))
+            .unwrap()
+            .into_iter()
+            .map(|vis| vis as usize)
+            .sum()
     }
-    n
-}
-
-fn visible_from(forest: &IMatrix, side: i8) -> BMatrix {
-    let visible: IMatrix = rotate::<i32>(forest, side);
-    let visible: BMatrix = rotate::<i32>(forest, side)
-        .iter()
-        .map(visible_left)
-        .collect::<BMatrix>();
-    rotate::<bool>(&visible, 4 - side)
-}
-
-fn visible_from_borders(forest: &IMatrix) -> BMatrix {
-    (0..4)
-        .map(|side| visible_from(forest, side))
-        .reduce(|acc, cur| matrix_or(acc, cur))
-        .unwrap()
-}
-
-fn matrix_or(m1: BMatrix, m2: BMatrix) -> BMatrix {
-    m1.into_iter()
-        .zip(m2)
-        .map(|(v1, v2)| {
-            v1.into_iter()
-                .zip(v2)
-                .map(|(c1, c2)| c1 || c2)
-                .collect::<BVec>()
-        })
-        .collect::<BMatrix>()
-}
-
-fn score_vector(right: Vec<i32>, tree: i32) -> i32 {
-    let mut max_r: i32 = -1;
-    right.into_iter().fold(0, |acc, r| {
-        if max_r >= tree {
-            // stop if you reach an edge or at the first tree that is the same height or
-            // taller than the tree under consideration.
-            acc
-        } else {
-            max_r = if r > max_r { r } else { max_r };
-            acc + 1
+    fn indexes(&self, side: &Side) -> Vec<Vec<usize>> {
+        match side {
+            Side::Left => (0..self.height)
+                .map(|y| {
+                    (0..self.width)
+                        .map(|x| x + y * self.width)
+                        .collect::<Vec<usize>>()
+                })
+                .collect::<Vec<Vec<usize>>>(),
+            Side::Top => (0..self.width)
+                .map(|x| {
+                    (0..self.height)
+                        .map(|y| x + y * self.width)
+                        .collect::<Vec<usize>>()
+                })
+                .collect::<Vec<Vec<usize>>>(),
+            Side::Right => (0..self.height)
+                .map(|y| {
+                    (0..self.width)
+                        .map(|x| x + y * self.width)
+                        .rev()
+                        .collect::<Vec<usize>>()
+                })
+                .collect::<Vec<Vec<usize>>>(),
+            Side::Bottom => (0..self.width)
+                .map(|x| {
+                    (0..self.height)
+                        .map(|y| x + y * self.width)
+                        .rev()
+                        .collect::<Vec<usize>>()
+                })
+                .collect::<Vec<Vec<usize>>>(),
         }
-    })
-}
+    }
+    fn visible_from(&self, side: &Side) -> Vec<bool> {
+        let mut visible = self
+            .indexes(side)
+            .iter()
+            .flat_map(|row| {
+                let mut max_height: isize = -1;
+                row.iter().map(move |i| {
+                    let tree = self.trees[*i] as isize;
+                    if tree > max_height {
+                        max_height = tree;
+                        return (*i, true);
+                    }
+                    return (*i, false);
+                })
+            })
+            .collect::<Vec<(usize, bool)>>();
+        visible.sort_by(|(i, _), (j, _)| i.cmp(j));
+        visible.iter().map(|(_, v)| *v).collect()
+    }
+    fn vec_or(m1: Vec<bool>, m2: Vec<bool>) -> Vec<bool> {
+        m1.iter()
+            .zip(m2.iter())
+            .map(|(c1, c2)| *c1 || *c2)
+            .collect::<Vec<bool>>()
+    }
 
-fn scenic_score(m: &IMatrix, i: usize, j: usize) -> i32 {
-    let len = m.len();
-    let tree = m[i][j];
-    let row = &m[i];
-    let col = m.iter().map(|row| row[j]).collect::<Vec<_>>();
+    fn scenic_scores(&self) -> Vec<usize> {
+        (0..self.height)
+            .flat_map(|y| {
+                (0..self.width)
+                    .map(|x| self.scenic_score(x, y))
+                    .collect::<Vec<usize>>()
+            })
+            .collect()
+    }
+    fn scenic_score(&self, x: usize, y: usize) -> usize {
+        let tree = self.get(x, y);
+        let row = self.get_row(y);
+        let col = self.get_col(x);
 
-    let top = col[..i].iter().rev().map(|x| *x).collect::<Vec<i32>>();
-    let right = row[j + 1..].to_vec();
-    let bottom = col[i + 1..].to_vec();
-    let left = row[..j].iter().rev().map(|x| *x).collect::<Vec<i32>>();
+        let s_left = Self::score_vector(row[..x].iter().cloned().rev().collect(), tree);
+        let s_top = Self::score_vector(col[..y].iter().cloned().rev().collect(), tree);
+        let s_right = Self::score_vector(row[(x + 1)..].iter().cloned().collect(), tree);
+        let s_bottom = Self::score_vector(col[(y + 1)..].iter().cloned().collect(), tree);
 
-    let t_score = if i == 0 { 0 } else { score_vector(top, tree) };
-    let r_score = if j == len - 1 {
-        0
-    } else {
-        score_vector(right, tree)
-    };
-    let b_score = if i == len - 1 {
-        0
-    } else {
-        score_vector(bottom, tree)
-    };
-    let l_score = if j == 0 { 0 } else { score_vector(left, tree) };
-    r_score * l_score * t_score * b_score
-}
-
-fn calculate_scenic_scores(forest: &IMatrix) -> IMatrix {
-    forest
-        .into_iter()
-        .enumerate()
-        .map(|(i, row)| {
-            row.into_iter()
-                .enumerate()
-                .map(|(j, _)| scenic_score(forest, i, j))
-                .collect::<IVec>()
+        s_left * s_top * s_right * s_bottom
+    }
+    fn score_vector(vector: Vec<usize>, tree: usize) -> usize {
+        let mut max_t: isize = -1;
+        vector.into_iter().fold(0, |acc, t| {
+            if max_t >= tree as isize {
+                acc
+            } else {
+                max_t = if t as isize > max_t {
+                    t as isize
+                } else {
+                    max_t
+                };
+                acc + 1
+            }
         })
-        .collect::<IMatrix>()
+    }
+    fn get(&self, x: usize, y: usize) -> usize {
+        self.trees[x + self.width * y]
+    }
+    fn get_row(&self, y: usize) -> Vec<usize> {
+        (0..self.width)
+            .map(|x| self.trees[x + y * self.width])
+            .collect()
+    }
+    fn get_col(&self, x: usize) -> Vec<usize> {
+        (0..self.height)
+            .map(|y| self.trees[x + y * self.width])
+            .collect()
+    }
 }
 
-fn solve_pt1(input_text: String) -> u64 {
-    let forest = input_text
+fn parse_input(input_text: &str) -> Forest {
+    let &height = &input_text.lines().count();
+    let &width = &input_text.lines().next().expect("At least one line").len();
+    let trees = input_text
         .lines()
-        .map(|row| {
+        .flat_map(|row| {
             row.chars()
-                .map(|c| c.to_digit(10).unwrap() as i32)
+                .map(|c| c.to_digit(10).expect("It's allright") as usize)
                 .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
-    let vis_all = visible_from_borders(&forest);
-    let total_visible = vis_all.iter().fold(0, |acc, row| {
-        acc + row.into_iter().map(|b| *b as u64).sum::<u64>()
-    });
-    total_visible
+    Forest {
+        trees,
+        height,
+        width,
+    }
 }
 
-fn solve_pt2(input_text: String) -> u64 {
-    let forest = input_text
-        .lines()
-        .map(|row| {
-            row.chars()
-                .map(|c| c.to_digit(10).unwrap() as i32)
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
-    let scenic_scores = calculate_scenic_scores(&forest);
-    let max_scenic = scenic_scores
-        .into_iter()
-        .map(|row| row.into_iter().max().unwrap())
-        .max()
-        .unwrap() as u64;
-    max_scenic
+fn solve_pt1(input_text: &str) -> usize {
+    let forest = parse_input(input_text);
+    forest.visible_from_borders()
+}
+
+fn solve_pt2(input_text: &str) -> usize {
+    let forest = parse_input(input_text);
+    let scenic_scores = forest.scenic_scores();
+    scenic_scores.into_iter().max().unwrap()
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     const FILENAME: &str = "data/day_08_input.txt";
     let input_text = load_input(FILENAME);
 
-    print!("Part one: {:#?}\n", solve_pt1(input_text.clone()));
+    print!("Part one: {:#?}\n", solve_pt1(&input_text));
     // Correct: 1814
 
-    print!("Part two: {:#?}\n", solve_pt2(input_text.clone()));
+    print!("Part two: {:#?}\n", solve_pt2(&input_text));
     // Correct: 330786
 
     Ok(())
@@ -242,16 +255,16 @@ mod example {
 65332
 33549
 35390";
-    const ANS_PT1: u64 = 21;
-    const ANS_PT2: u64 = 8;
+    const ANS_PT1: usize = 21;
+    const ANS_PT2: usize = 8;
 
     #[test]
     fn test_pt1() {
-        assert_eq!(solve_pt1(TEST_DATA.to_string()), ANS_PT1);
+        assert_eq!(solve_pt1(TEST_DATA), ANS_PT1);
     }
 
     #[test]
     fn test_pt2() {
-        assert_eq!(solve_pt2(TEST_DATA.to_string()), ANS_PT2);
+        assert_eq!(solve_pt2(TEST_DATA), ANS_PT2);
     }
 }
